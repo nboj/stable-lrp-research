@@ -55,15 +55,15 @@ if __name__ == "__main__":
     generator = torch.cuda.manual_seed(seed)
     torch.manual_seed(seed)
 
-    text_input = tokenizer(prompt, padding='max_length', max_length=tokenizer.model_max_length, truncation=True, return_tensors='pt')
+    text_input = tokenizer(prompt, padding='max_length', max_length=tokenizer.model_max_length, truncation=True, return_tensors='pt').to("cuda")
     with torch.no_grad():
-        text_embeddings = text_encoder(text_input.input_ids.to(torch_device))[0]
+        text_embeddings = text_encoder(text_input.input_ids).last_hidden_state.to(pipe.unet.dtype)
 
     max_length = text_input.input_ids.shape[-1]
 
-    uncond_input = tokenizer([""] * batch_size, padding="max_length", max_length=max_length, return_tensors="pt")
+    uncond_input = tokenizer([""] * batch_size, padding="max_length", max_length=max_length, return_tensors="pt").to("cuda")
     with torch.no_grad():
-        uncond_embeddings = text_encoder(uncond_input.input_ids.to(torch_device))[0]
+        uncond_embeddings = text_encoder(uncond_input.input_ids).last_hidden_state.to(pipe.unet.dtype)
     text_embeddings = torch.cat([uncond_embeddings, text_embeddings])
     #print(text_embeddings.shape)
     print(seed)
