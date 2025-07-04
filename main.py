@@ -180,7 +180,7 @@ if __name__ == "__main__":
     R = []
     values = []
     keys = []
-    #weights = []
+    weights = []
 
 
     for handle in handles:
