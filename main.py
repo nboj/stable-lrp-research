@@ -90,7 +90,8 @@ if __name__ == "__main__":
     latents = torch.randn(
         (batch_size, unet.config.in_channels, height // 8, width // 8),
         device=torch_device,
-        generator=generator
+        generator=generator,
+        dtype=unet.dtype
     )
     latents = latents * scheduler.init_noise_sigma
 
