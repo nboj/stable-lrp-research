@@ -265,19 +265,9 @@ def forward_feedforward(ff, hidden_states):
   return hidden_states
 
 def forward_unet(unet, latents, t, text_embeddings):
-  dtype = unet.dtype                      # == torch.float16 after fp16 load
-  
-  # make sure *all* inputs match that dtype
-  latents          = latents.to(dtype)
-  text_embeddings  = text_embeddings.to(dtype)
-  
-  timesteps = t.expand(latents.size(0)).to(latents.device)
-  time_proj = unet.time_proj(timesteps).to(dtype)
-  time_embedding = unet.time_embedding(time_proj)          # ← now dtypes match 🎉
-
   conv_in = unet.conv_in
-  #time_proj = unet.time_proj
-  #time_embedding = unet.time_embedding
+  time_proj = unet.time_proj
+  time_embedding = unet.time_embedding
 
   down_blocks = unet.down_blocks
   mid_blocks = unet.mid_block
@@ -288,8 +278,9 @@ def forward_unet(unet, latents, t, text_embeddings):
   conv_out = unet.conv_out
 
   with torch.no_grad():
+    dtype = unet.dtype
     time = t.expand(latents.shape[0]).cuda()
-    time = time_proj(time)
+    time = time_proj(time).to(dtype)
     time = time_embedding(time)
 
     hidden_states = conv_in(latents)
