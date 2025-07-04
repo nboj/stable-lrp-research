@@ -48,6 +48,9 @@ def lrp_conv(layer, a, R, e=1e-5, rho=lambda w, b: (w, b), incr=lambda w,b:(w,b)
     Returns:
         Relevance scores at the input of the layer.
     """
+    if R.dtype != layer.weight.dtype:
+        R = R.to(layer.weight.dtype)
+        a = a.to(layer.weight.dtype)
     if isinstance(layer, torch.nn.Conv2d):
         return lrp_conv2d(layer, a, R, epsilon, rho)
     elif isinstance(layer, torch.nn.Linear):
