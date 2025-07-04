@@ -21,7 +21,7 @@ def lrp_denoise_step(x_t, eps_theta, alpha_t, beta_t, R_out, eps=1e-6):
 if __name__ == "__main__":
     # Load the pre-trained model
     model_id = "CompVis/stable-diffusion-v1-4"
-    pipe = StableDiffusionPipeline.from_pretrained(model_id)
+    pipe = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float16).to("cuda")
     pipe = pipe.to('cuda')  # Use "cpu" if you don't have a compatible GPU
     #pipe.enable_sequential_cpu_offload()
 
