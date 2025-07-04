@@ -273,7 +273,7 @@ def forward_unet(unet, latents, t, text_embeddings):
   
   timesteps = t.expand(latents.size(0)).to(latents.device).to(dtype)
   time_proj = unet.time_proj(timesteps)
-  time_embedding = unet.time_embedding(emb)          # ← now dtypes match 🎉
+  time_embedding = unet.time_embedding(time_proj)          # ← now dtypes match 🎉
 
   conv_in = unet.conv_in
   #time_proj = unet.time_proj
