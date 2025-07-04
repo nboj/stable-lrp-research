@@ -1,8 +1,6 @@
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
 import torch
 import sys
-
-sys.path.insert(1, '/content/drive/MyDrive/Colab Notebooks/sd/')
 import src.sd as sd
 import src.utils as utils
 
@@ -188,7 +186,7 @@ if __name__ == "__main__":
     for handle in handles:
         handle.remove()
 
-    timestep = scheduler.timesteps[index]
+    timestep = scheduler.timesteps[len(scheduler.timesteps)-1]
 
     prev = activations[562][1]
     activations[562] = (activations[562][0], prev)
