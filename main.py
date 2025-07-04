@@ -180,7 +180,7 @@ if __name__ == "__main__":
     R = []
     values = []
     keys = []
-    weights = []
+    #weights = []
 
 
     for handle in handles:
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     prev = activations[562][1]
     activations[562] = (activations[562][0], prev)
 
-    prev, q, k, v, w = utils.apply_lrp(unet, vae, lays, activations, samples, time, text_embeddings, initial_latents, weights)
+    prev, q, k, v, w = utils.apply_lrp(unet, vae, lays, activations, samps, time, text_embeddings, latents, weights)
     prev = utils.norm_rel(prev)
     R.append(prev.detach().cpu())
     values.append(k)
