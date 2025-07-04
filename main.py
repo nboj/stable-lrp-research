@@ -172,23 +172,8 @@ if __name__ == "__main__":
 
 
 
-
-
-
-    ## YIKEs
-    prev = None
-    R = []
-    values = []
-    keys = []
-
-
     for handle in handles:
         handle.remove()
-
-    timestep = scheduler.timesteps[len(scheduler.timesteps)-1]
-
-    prev = activations[562][1]
-    activations[562] = (activations[562][0], prev)
 
     prev, q, k, v, w = utils.apply_lrp(unet, vae, lays, activations, samps, time, text_embeddings, latent_model_input, weights)
     prev = utils.norm_rel(prev)
