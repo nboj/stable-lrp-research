@@ -104,10 +104,7 @@ if __name__ == "__main__":
     # noise_res = [latents]
     lays = None
     with torch.no_grad():
-        for idx, t in enumerate(tqdm(scheduler.timesteps)):
-            for name, layer in unet.named_modules():
-                handles.append(layer.register_forward_hook(save_activation(name,layer)))
-
+        for idx, t in enumerate(tqdm(scheduler.timesteps-1)):
             latent_model_input = torch.cat([latents] * 2)
             latent_model_input = scheduler.scale_model_input(latent_model_input, timestep=t)
 
@@ -126,14 +123,7 @@ if __name__ == "__main__":
             if lays is None:
                 lays = layers
 
-            torch.save(latents.detach(), f'/data/cauman/activations/lat-{idx}.pt')
-            torch.save(noise_pred, f'/data/cauman/activations/pred-{idx}.pt')
 
-            torch.save(activations, f'/data/cauman/activations/a-{idx}.pt')
-            torch.save(samps, f'/data/cauman/activations/s-{idx}.pt')
-            torch.save(time, f'/data/cauman/activations/t-{idx}.pt')
-            torch.save(latent_model_input, f'/data/cauman/activations/i-{idx}.pt')
-            torch.save(weights, f'/data/cauman/activations/w-{idx}.pt')
             # save_to_h5py(idx, latents, noise_pred, activations, samps, time, latent_model_input, weights);
             # data_to_save = {
             #    "lat": latents.detach(),
@@ -149,6 +139,27 @@ if __name__ == "__main__":
             del activations, layers, handles, samps, time, latent_model_input, weights
             torch.cuda.empty_cache()
             activations, layers, handles = [], [], []
+
+        for name, layer in unet.named_modules():
+            handles.append(layer.register_forward_hook(save_activation(name,layer)))
+
+        latent_model_input = torch.cat([latents] * 2)
+        latent_model_input = scheduler.scale_model_input(latent_model_input, timestep=t)
+
+        noise_pred, samps, time, weights = sd.forward_unet(unet, latent_model_input, t, text_embeddings)
+
+        # perform guidance
+        noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+        noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
+
+        # compute the previous noisy sample x_t -> x_t-1
+        latents = scheduler.step(noise_pred, t, latents).prev_sample
+
+        for handle in handles:
+            handle.remove()
+
+        if lays is None:
+            lays = layers
 
     # scale and decode the image latents with vae
     X = 1 / 0.18215 * latents
@@ -177,122 +188,18 @@ if __name__ == "__main__":
     for handle in handles:
         handle.remove()
 
-    for index in tqdm(reversed(range(num_inference_steps+1))):
-        timestep = scheduler.timesteps[index]
+    timestep = scheduler.timesteps[index]
 
-        # Load necessary data
-        activations = torch.load(f'/data/cauman/activations/a-{index}.pt')
-        samples = torch.load(f'/data/cauman/activations/s-{index}.pt')
-        time = torch.load(f'/data/cauman/activations/t-{index}.pt')
-        initial_latents = torch.load(f'/data/cauman/activations/i-{index}.pt')
-        weights = torch.load(f'/data/cauman/activations/w-{index}.pt')
+    prev = activations[562][1]
+    activations[562] = (activations[562][0], prev)
 
-        if prev is None:
-          prev = activations[562][1]
-          activations[562] = (activations[562][0], prev)
-
-          prev, q, k, v, w = utils.apply_lrp(unet, vae, lays, activations, samples, time, text_embeddings, initial_latents, weights)
-          prev = utils.norm_rel(prev)
-          R.append(prev.detach().cpu())
-          values.append(k)
-          keys.append(k)
-          weights.append(w)
-          del activations, samples, time, initial_latents, weights, q, k, v
-        else:
-            model_output = prev              # ε_θ  from the *next* time-step
-            sample       = initial_latents   # x_t
-
-            alpha_t      = scheduler.alphas_cumprod[timestep].to(sample)
-            beta_t       = 1.0 - alpha_t
-
-            # 1) predicted clean image – this is the node you start from
-            pred_orig = (sample - beta_t.sqrt()*model_output) / alpha_t.sqrt()
-            R_out     = pred_orig            # incoming relevance
-
-            # 2) split relevance between x_t   and   ε_θ
-            R_sample, R_model_output = lrp_denoise_step( sample, model_output, alpha_t, beta_t, R_out)
-
-            # 3) push the ε_θ branch back through the UNet
-            activations[562] = (activations[562][0], R_model_output)
-            prev, q, k, v, w = utils.apply_lrp( unet, vae, lays, activations, samples, time, text_embeddings, initial_latents, weights)
-            prev = utils.norm_rel(prev)
-
-            R.append(prev.detach().cpu())
-            values.append(v);  keys.append(k);  weights.append(w)
-            del activations, samples, time, initial_latents, weights, q, k, v
-          ## Get the model output (predicted noise)
-          #model_output = prev  # Output of UNet
-
-          ## Get current sample (latent at timestep t)
-          #sample = initial_latents  # x_t
-
-          ## Compute alpha and beta products
-          #alpha_prod_t = scheduler.alphas_cumprod[timestep]
-          #beta_prod_t = 1 - alpha_prod_t
-
-          ## Convert to correct dtype and device
-          #alpha_prod_t = alpha_prod_t.to(sample.dtype).to(sample.device)
-          #beta_prod_t = beta_prod_t.to(sample.dtype).to(sample.device)
-
-          ## Compute square roots
-          #sqrt_alpha_prod_t = torch.sqrt(alpha_prod_t)
-          #sqrt_beta_prod_t = torch.sqrt(beta_prod_t)
-
-          ## Compute the predicted original sample (denoised image)
-          #pred_original_sample = (sample - sqrt_beta_prod_t * model_output) / sqrt_alpha_prod_t
-
-          ## Set initial relevance to the denoised image
-          #R_denoised = pred_original_sample
-
-          ## Propagate relevance through division
-          #numerator = sample - sqrt_beta_prod_t * model_output
-          #R_numerator, _ = utils.lrp_division(numerator, sqrt_alpha_prod_t, R_denoised)
-
-          ## Propagate relevance through subtraction
-          #R_sample, R_noise_component = utils.lrp_subtraction(sample, sqrt_beta_prod_t * model_output, R_numerator)
-
-          ## Propagate relevance through multiplication
-          #R_sqrt_beta, R_model_output = utils.lrp_multiplication(sqrt_beta_prod_t, model_output, R_noise_component)
-
-          #activations[562] = (activations[562][0], R_model_output)
-
-          ## Now propagate R_model_output back through the UNet
-          #prev, q, k, v, w = utils.apply_lrp(
-          #    unet, vae, lays, activations, samples, time, text_embeddings,
-          #    initial_latents, weights
-          #)
-          #prev = utils.norm_rel(prev)
-          ##prev = utils.logarithmic_mapping_torch(prev)
-          #R.append(prev.detach().cpu())
-          #values.append(v)
-          #keys.append(k)
-          #weights.append(w)
-
-
-
-    #prev = None
-    #R = []
-    #values = []
-    #
-    #for handle in handles:
-    #  handle.remove()
-    #for index in tqdm(reversed(range(num_inference_steps+1))):
-    #  activations = torch.load(f'./activations/a-{index}.pt')
-    #  samples = torch.load(f'./activations/s-{index}.pt')
-    #  time = torch.load(f'./activations/t-{index}.pt')
-    #  initial_latents = torch.load(f'./activations/i-{index}.pt')
-    #  weights = torch.load(f'./activations/w-{index}.pt')
-    #  if prev is None:
-    #    prev = activations[562][1]
-    #  activations[562] = (activations[562][0], prev)
-    #
-    #  prev, q, k, v = utils.apply_lrp(unet, vae, lays, activations, samples, time, text_embeddings, initial_latents, weights)
-    #  prev = utils.norm_rel(prev)
-    #  R.append(prev.detach().cpu())
-    #  values.append(k)
-    #
-    #  del activations, samples, time, initial_latents, weights, q, k, v
-
+    prev, q, k, v, w = utils.apply_lrp(unet, vae, lays, activations, samples, time, text_embeddings, initial_latents, weights)
+    prev = utils.norm_rel(prev)
+    R.append(prev.detach().cpu())
+    values.append(k)
+    keys.append(k)
+    weights.append(w)
+    del activations, samples, time, initial_latents, weights, q, k, v
 
 
 
@@ -311,8 +218,8 @@ if __name__ == "__main__":
     vae = vae.cpu()
     # for idx, (r, latent, noise) in enumerate(zip(reversed(R), latent_res[:-1], noise_res[:-1])):
     for idx, (r, vs, ks) in enumerate(zip(reversed(R), values, keys)):
-        latent = torch.load(f'/data/cauman/activations/lat-{idx}.pt')
-        pred = torch.load(f'/data/cauman/activations/pred-{idx}.pt')
+        latent = latents
+        pred = noise_pred
         # print(r.shape)
 
         uncond, text = (utils.norm_rel(r)*1e5).chunk(2)
@@ -342,25 +249,25 @@ if __name__ == "__main__":
 
         uncond_text, cond_text = total_value
         comb = uncond_text + guidance_scale * (cond_text - uncond_text)
-        utils.visualize_text_relevance(tokens, comb.cpu().sum(dim=-1), save_path=f'/data/cauman/results/lrp2a-{idx}.png')
+        utils.visualize_text_relevance(tokens, comb.cpu().sum(dim=-1), save_path=f'./results/lrp2a-{idx}.png')
         uncond_text, cond_text = total_key
         comb = uncond_text + guidance_scale * (cond_text - uncond_text)
-        utils.visualize_text_relevance(tokens, comb.cpu().sum(dim=-1), save_path=f'/data/cauman/results/lrp2b-{idx}.png')
+        utils.visualize_text_relevance(tokens, comb.cpu().sum(dim=-1), save_path=f'./results/lrp2b-{idx}.png')
 
 
         image = (image / 2 + 0.5).clamp(0, 1).squeeze()
         image = (image.permute(1, 2, 0) * 255).to(torch.uint8).cpu().numpy()
         image = Image.fromarray(image)
-        image.save(f'/data/cauman/results/noise-{idx}.png')
+        image.save(f'./results/noise-{idx}.png')
         display(image)
 
         noise = (noise / 2 + 0.5).clamp(0, 1).squeeze()
         noise = (noise.permute(1, 2, 0) * 255).to(torch.uint8).cpu().numpy()
         noise = Image.fromarray(noise)
-        noise.save(f'/data/cauman/results/noise_pred-{idx}.png')
+        noise.save(f'./results/noise_pred-{idx}.png')
         display(noise)
 
-        utils.heatmap(lrp[0].cpu().sum(axis=0), 5, 5, save_path=f'/data/cauman/results/lrp2-{idx}.png', log=True)
-        utils.heatmap(lrp[0].cpu().sum(axis=0), 5, 5, save_path=f'/data/cauman/results/lrp1-{idx}.png')
+        utils.heatmap(lrp[0].cpu().sum(axis=0), 5, 5, save_path=f'./results/lrp2-{idx}.png', log=True)
+        utils.heatmap(lrp[0].cpu().sum(axis=0), 5, 5, save_path=f'./results/lrp1-{idx}.png')
         print('\n\n\n\n\n')
 
