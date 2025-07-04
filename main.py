@@ -178,7 +178,7 @@ if __name__ == "__main__":
     uncond, text = (utils.norm_rel(R)*1e5).chunk(2)
     comb = 1 / 0.18215 *(uncond + guidance_scale * (text - uncond))
     im = vae.decode(comb).sample
-    plt.imshow(im[0].detach().cpu().sum(axis=0)
+    plt.imshow(im[0].detach().cpu().sum(axis=0))
 
 
     uncond, text = (utils.norm_rel(R)*1e5).chunk(2)
