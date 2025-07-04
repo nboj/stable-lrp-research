@@ -211,7 +211,7 @@ if __name__ == "__main__":
     utils.heatmap(lrp3[0].cpu().sum(axis=0), 5, 5, True)
 
     utils.heatmap(comb[0].detach().cpu().sum(axis=0), 5, 5)
-    utils.heatmap(comb[0].detach().cpu().sum(axis=0), 5, 5, True
+    utils.heatmap(comb[0].detach().cpu().sum(axis=0), 5, 5, True)
 
 
 
