@@ -3,6 +3,7 @@ import torch
 import sys
 import src.sd as sd
 import src.utils as utils
+import matplotlib.pyplot as plt
 
 from diffusers.models.unets.unet_2d_blocks import CrossAttnDownBlock2D, CrossAttnUpBlock2D, DownBlock2D, UpBlock2D, UNetMidBlock2DCrossAttn
 from tqdm.auto import tqdm
