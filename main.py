@@ -208,9 +208,9 @@ if __name__ == "__main__":
     utils.heatmap(lrp1[0].cpu().sum(axis=0), 5, 5, save_path="./results/save1.png")
     utils.heatmap(lrp2[0].cpu().sum(axis=0), 5, 5, save_path="./results/save2.png")
     utils.heatmap(lrp3[0].cpu().sum(axis=0), 5, 5, save_path="./results/save3.png")
-    utils.pos_heatmap(lrp3[0].cpu().sum(axis=0), image,5, save_path="./results/save4.png")
-    utils.neg_heatmap(lrp3[0].cpu().sum(axis=0),image,5, save_path="./results/save5.png")
-    utils.comb_heatmap(lrp3[0].cpu().sum(axis=0),5, save_path="./results/save6.png")
+    #utils.pos_heatmap(lrp3[0].cpu().sum(axis=0), image,5, save_path="./results/save4.png")
+    #utils.neg_heatmap(lrp3[0].cpu().sum(axis=0),image,5, save_path="./results/save5.png")
+    #utils.comb_heatmap(lrp3[0].cpu().sum(axis=0),5, save_path="./results/save6.png")
     utils.heatmap(lrp3[0].cpu().sum(axis=0), 5, 5, True, save_path="./results/save7.png")
 
     utils.heatmap(comb[0].detach().cpu().sum(axis=0), 5, 5, save_path="./results/save8.png")
