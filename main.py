@@ -205,80 +205,80 @@ if __name__ == "__main__":
 
     utils.debug_relevance_scores(lrp3)
 
-    utils.heatmap(lrp1[0].cpu().sum(axis=0), 5, 5)
-    utils.heatmap(lrp2[0].cpu().sum(axis=0), 5, 5)
-    utils.heatmap(lrp3[0].cpu().sum(axis=0), 5, 5)
-    utils.pos_heatmap(lrp3[0].cpu().sum(axis=0), image,5)
-    utils.neg_heatmap(lrp3[0].cpu().sum(axis=0),image,5)
-    utils.comb_heatmap(lrp3[0].cpu().sum(axis=0),5)
-    utils.heatmap(lrp3[0].cpu().sum(axis=0), 5, 5, True)
+    utils.heatmap(lrp1[0].cpu().sum(axis=0), 5, 5, save_path="./results/save1.png")
+    utils.heatmap(lrp2[0].cpu().sum(axis=0), 5, 5, save_path="./results/save2.png")
+    utils.heatmap(lrp3[0].cpu().sum(axis=0), 5, 5, save_path="./results/save3.png")
+    utils.pos_heatmap(lrp3[0].cpu().sum(axis=0), image,5, save_path="./results/save4.png")
+    utils.neg_heatmap(lrp3[0].cpu().sum(axis=0),image,5, save_path="./results/save5.png")
+    utils.comb_heatmap(lrp3[0].cpu().sum(axis=0),5, save_path="./results/save6.png")
+    utils.heatmap(lrp3[0].cpu().sum(axis=0), 5, 5, True, save_path="./results/save7.png")
 
-    utils.heatmap(comb[0].detach().cpu().sum(axis=0), 5, 5)
-    utils.heatmap(comb[0].detach().cpu().sum(axis=0), 5, 5, True)
-
-
+    utils.heatmap(comb[0].detach().cpu().sum(axis=0), 5, 5, save_path="./results/save8.png")
+    utils.heatmap(comb[0].detach().cpu().sum(axis=0), 5, 5, True, save_path="./results/save9.png")
 
 
 
-    tokens = tokenizer.convert_ids_to_tokens(text_input.input_ids[0])
-    image2 = None
-    total_values = None
-    total_keys = None
 
-    L = len(R)-1
-    vae = vae.cpu()
+
+    #tokens = tokenizer.convert_ids_to_tokens(text_input.input_ids[0])
+    #image2 = None
+    #total_values = None
+    #total_keys = None
+
+    #L = len(R)-1
+    #vae = vae.cpu()
     # for idx, (r, latent, noise) in enumerate(zip(reversed(R), latent_res[:-1], noise_res[:-1])):
-    for idx, (r, vs, ks) in enumerate(zip(reversed(R), values, keys)):
-        latent = latents
-        pred = noise_pred
-        # print(r.shape)
-
-        uncond, text = (utils.norm_rel(r)*1e5).chunk(2)
-        comb = 1 / 0.18215 * (uncond + guidance_scale * (text - uncond))
-        uncond = 1 / 0.18215 *uncond
-        text = 1 / 0.18215 *text
-        X = 1 / 0.18215 * latent
-        pred = 1 / 0.18215 * pred
-
-        with torch.no_grad():
-            lrp = vae.decode(comb).sample
-            image = vae.decode(X.detach().cpu()).sample
-            noise = vae.decode(pred.detach().cpu()).sample
-
-        total_value = None;
-        for v in vs:
-            if total_value is None:
-                total_value = v[0][0]
-            else:
-                total_value += v[0][0]
-        total_key = None;
-        for k in ks:
-            if total_key is None:
-                total_key = k[0][0]
-            else:
-                total_key += k[0][0]
-
-        uncond_text, cond_text = total_value
-        comb = uncond_text + guidance_scale * (cond_text - uncond_text)
-        utils.visualize_text_relevance(tokens, comb.cpu().sum(dim=-1), save_path=f'./results/lrp2a-{idx}.png')
-        uncond_text, cond_text = total_key
-        comb = uncond_text + guidance_scale * (cond_text - uncond_text)
-        utils.visualize_text_relevance(tokens, comb.cpu().sum(dim=-1), save_path=f'./results/lrp2b-{idx}.png')
-
-
-        image = (image / 2 + 0.5).clamp(0, 1).squeeze()
-        image = (image.permute(1, 2, 0) * 255).to(torch.uint8).cpu().numpy()
-        image = Image.fromarray(image)
-        image.save(f'./results/noise-{idx}.png')
-        display(image)
-
-        noise = (noise / 2 + 0.5).clamp(0, 1).squeeze()
-        noise = (noise.permute(1, 2, 0) * 255).to(torch.uint8).cpu().numpy()
-        noise = Image.fromarray(noise)
-        noise.save(f'./results/noise_pred-{idx}.png')
-        display(noise)
-
-        utils.heatmap(lrp[0].cpu().sum(axis=0), 5, 5, save_path=f'./results/lrp2-{idx}.png', log=True)
-        utils.heatmap(lrp[0].cpu().sum(axis=0), 5, 5, save_path=f'./results/lrp1-{idx}.png')
-        print('\n\n\n\n\n')
-
+#    for idx, (r, vs, ks) in enumerate(zip(reversed(R), values, keys)):
+#        latent = latents
+#        pred = noise_pred
+#        # print(r.shape)
+#
+#        uncond, text = (utils.norm_rel(r)*1e5).chunk(2)
+#        comb = 1 / 0.18215 * (uncond + guidance_scale * (text - uncond))
+#        uncond = 1 / 0.18215 *uncond
+#        text = 1 / 0.18215 *text
+#        X = 1 / 0.18215 * latent
+#        pred = 1 / 0.18215 * pred
+#
+#        with torch.no_grad():
+#            lrp = vae.decode(comb).sample
+#            image = vae.decode(X.detach().cpu()).sample
+#            noise = vae.decode(pred.detach().cpu()).sample
+#
+#        total_value = None;
+#        for v in vs:
+#            if total_value is None:
+#                total_value = v[0][0]
+#            else:
+#                total_value += v[0][0]
+#        total_key = None;
+#        for k in ks:
+#            if total_key is None:
+#                total_key = k[0][0]
+#            else:
+#                total_key += k[0][0]
+#
+#        uncond_text, cond_text = total_value
+#        comb = uncond_text + guidance_scale * (cond_text - uncond_text)
+#        utils.visualize_text_relevance(tokens, comb.cpu().sum(dim=-1), save_path=f'./results/lrp2a-{idx}.png')
+#        uncond_text, cond_text = total_key
+#        comb = uncond_text + guidance_scale * (cond_text - uncond_text)
+#        utils.visualize_text_relevance(tokens, comb.cpu().sum(dim=-1), save_path=f'./results/lrp2b-{idx}.png')
+#
+#
+#        image = (image / 2 + 0.5).clamp(0, 1).squeeze()
+#        image = (image.permute(1, 2, 0) * 255).to(torch.uint8).cpu().numpy()
+#        image = Image.fromarray(image)
+#        image.save(f'./results/noise-{idx}.png')
+#        display(image)
+#
+#        noise = (noise / 2 + 0.5).clamp(0, 1).squeeze()
+#        noise = (noise.permute(1, 2, 0) * 255).to(torch.uint8).cpu().numpy()
+#        noise = Image.fromarray(noise)
+#        noise.save(f'./results/noise_pred-{idx}.png')
+#        display(noise)
+#
+#        utils.heatmap(lrp[0].cpu().sum(axis=0), 5, 5, save_path=f'./results/lrp2-{idx}.png', log=True)
+#        utils.heatmap(lrp[0].cpu().sum(axis=0), 5, 5, save_path=f'./results/lrp1-{idx}.png')
+#        print('\n\n\n\n\n')
+#
