@@ -173,7 +173,7 @@ if __name__ == "__main__":
         image
 
 
-    activations[562][1] = activations[562][1]
+    # activations[562][1] = activations[562][1].to(pipe.unet.dtype)
     R, queries, keys, values, weights = utils.apply_lrp(unet, vae, layers, activations, samples, time, text_embeddings, initial_latents, weights)
 
 
